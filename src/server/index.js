@@ -150,10 +150,31 @@ server.listen(PORT, () => {
 });
 
 // 優雅關閉
+let isShuttingDown = false;
 process.on('SIGINT', () => {
+  if (isShuttingDown) {
+    console.log('\n⚠️  Force exit...');
+    process.exit(1);
+  }
+
+  isShuttingDown = true;
   console.log('\n🛑 Shutting down server...');
+
+  // 關閉所有 WebSocket 連線
+  wss.clients.forEach(client => {
+    client.close();
+  });
+
   hardwareController.cleanup();
+
+  // 設定超時，如果 5 秒內沒關閉就強制退出
+  const timeout = setTimeout(() => {
+    console.log('⚠️  Force closing...');
+    process.exit(0);
+  }, 5000);
+
   server.close(() => {
+    clearTimeout(timeout);
     console.log('👋 Server closed');
     process.exit(0);
   });
