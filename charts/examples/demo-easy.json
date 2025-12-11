@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "title": "Demo Song",
+    "artist": "Board Music Team",
+    "charter": "AI Generated",
+    "difficulty": "EASY",
+    "level": 3,
+    "bpm": 120,
+    "offset": 0,
+    "duration": 30000,
+    "audioFile": "audio/demo.mp3",
+    "previewStart": 5000,
+    "createdAt": "2025-12-11T00:00:00Z",
+    "description": "A simple demo chart for testing"
+  },
+  "gameConfig": {
+    "lanes": 4,
+    "noteSpeed": 1.0,
+    "judgeOffset": 0
+  },
+  "notes": [
+    {"time": 1000, "lane": 0, "type": "tap", "duration": 0},
+    {"time": 1500, "lane": 1, "type": "tap", "duration": 0},
+    {"time": 2000, "lane": 2, "type": "tap", "duration": 0},
+    {"time": 2500, "lane": 3, "type": "tap", "duration": 0},
+    {"time": 3000, "lane": 0, "type": "tap", "duration": 0},
+    {"time": 3500, "lane": 1, "type": "tap", "duration": 0},
+    {"time": 4000, "lane": 2, "type": "tap", "duration": 0},
+    {"time": 4500, "lane": 3, "type": "tap", "duration": 0},
+    {"time": 5000, "lane": 0, "type": "tap", "duration": 0},
+    {"time": 5000, "lane": 2, "type": "tap", "duration": 0},
+    {"time": 6000, "lane": 1, "type": "tap", "duration": 0},
+    {"time": 6000, "lane": 3, "type": "tap", "duration": 0},
+    {"time": 7000, "lane": 0, "type": "tap", "duration": 0},
+    {"time": 7000, "lane": 1, "type": "tap", "duration": 0},
+    {"time": 7000, "lane": 2, "type": "tap", "duration": 0},
+    {"time": 8000, "lane": 3, "type": "tap", "duration": 0},
+    {"time": 9000, "lane": 2, "type": "tap", "duration": 0},
+    {"time": 10000, "lane": 1, "type": "tap", "duration": 0},
+    {"time": 11000, "lane": 0, "type": "tap", "duration": 0},
+    {"time": 12000, "lane": 0, "type": "tap", "duration": 0},
+    {"time": 12000, "lane": 1, "type": "tap", "duration": 0},
+    {"time": 12000, "lane": 2, "type": "tap", "duration": 0},
+    {"time": 12000, "lane": 3, "type": "tap", "duration": 0}
+  ],
+  "timing": [
+    {"time": 0, "bpm": 120}
+  ]
+}

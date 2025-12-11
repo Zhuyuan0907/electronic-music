@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>板樂 - Board Music Game</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 主選單 -->
+    <div id="menu-screen" class="screen active">
+      <div class="container">
+        <h1 class="title">🎮 板樂</h1>
+        <p class="subtitle">Board Music Game</p>
+
+        <div class="status-bar">
+          <div id="connection-status" class="status disconnected">
+            <span class="status-dot"></span>
+            <span class="status-text">連線中...</span>
+          </div>
+          <div id="hardware-status" class="status">
+            <span class="status-icon">🔌</span>
+            <span class="status-text">硬體: 檢測中...</span>
+          </div>
+        </div>
+
+        <div class="song-list" id="song-list">
+          <div class="loading">載入歌曲列表...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="game-screen" class="screen">
+      <div class="game-container">
+        <div class="game-header">
+          <div class="song-info">
+            <h2 id="current-song-title">Song Title</h2>
+            <p id="current-song-artist">Artist</p>
+          </div>
+          <div class="score-info">
+            <div class="score-item">
+              <span class="label">分數</span>
+              <span id="score-value" class="value">0</span>
+            </div>
+            <div class="score-item">
+              <span class="label">連擊</span>
+              <span id="combo-value" class="value">0</span>
+            </div>
+          </div>
+        </div>
+
+        <canvas id="game-canvas"></canvas>
+
+        <div class="game-controls">
+          <button id="back-button" class="btn btn-secondary">返回選單</button>
+        </div>
+
+        <div class="judge-display" id="judge-display"></div>
+      </div>
+    </div>
+
+    <!-- 結果畫面 -->
+    <div id="result-screen" class="screen">
+      <div class="container">
+        <h1 class="title">遊戲結束</h1>
+
+        <div class="result-card">
+          <div class="result-header">
+            <h2 id="result-song-title">Song Title</h2>
+            <p id="result-song-artist">Artist</p>
+          </div>
+
+          <div class="result-stats">
+            <div class="stat-row">
+              <span class="stat-label">總分</span>
+              <span id="result-total-score" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">準確度</span>
+              <span id="result-accuracy" class="stat-value">0%</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">最高連擊</span>
+              <span id="result-max-combo" class="stat-value">0</span>
+            </div>
+          </div>
+
+          <div class="result-details">
+            <div class="detail-item perfect">
+              <span class="detail-label">PERFECT</span>
+              <span id="result-perfect" class="detail-value">0</span>
+            </div>
+            <div class="detail-item great">
+              <span class="detail-label">GREAT</span>
+              <span id="result-great" class="detail-value">0</span>
+            </div>
+            <div class="detail-item good">
+              <span class="detail-label">GOOD</span>
+              <span id="result-good" class="detail-value">0</span>
+            </div>
+            <div class="detail-item miss">
+              <span class="detail-label">MISS</span>
+              <span id="result-miss" class="detail-value">0</span>
+            </div>
+          </div>
+
+          <button id="result-back-button" class="btn btn-primary">返回選單</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/websocket.js"></script>
+  <script src="/js/game.js"></script>
+  <script src="/js/ui.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

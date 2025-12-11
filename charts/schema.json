@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://board-music-game.com/chart-schema.json",
+  "title": "Board Music Game Chart Format",
+  "description": "AI-friendly chart format for rhythm game beatmaps",
+  "type": "object",
+  "required": ["metadata", "gameConfig", "notes"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["title", "artist", "charter", "difficulty", "level", "bpm", "duration", "audioFile"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Song title",
+          "minLength": 1
+        },
+        "artist": {
+          "type": "string",
+          "description": "Artist name",
+          "minLength": 1
+        },
+        "charter": {
+          "type": "string",
+          "description": "Chart creator (e.g., 'AI Generated', 'Human Name')",
+          "minLength": 1
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["EASY", "NORMAL", "HARD", "EXPERT"],
+          "description": "Difficulty level"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 15,
+          "description": "Numeric difficulty rating"
+        },
+        "bpm": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Beats per minute (base tempo)"
+        },
+        "offset": {
+          "type": "number",
+          "default": 0,
+          "description": "Audio offset in milliseconds"
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Song duration in milliseconds"
+        },
+        "audioFile": {
+          "type": "string",
+          "description": "Path to audio file (relative to charts directory)"
+        },
+        "previewStart": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Preview start time in milliseconds"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp (ISO 8601)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Chart description or notes"
+        }
+      }
+    },
+    "gameConfig": {
+      "type": "object",
+      "properties": {
+        "lanes": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 5,
+          "default": 4,
+          "description": "Number of lanes (tracks)"
+        },
+        "noteSpeed": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 5.0,
+          "default": 1.0,
+          "description": "Note scroll speed multiplier"
+        },
+        "judgeOffset": {
+          "type": "number",
+          "default": 0,
+          "description": "Judge timing offset in milliseconds"
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "description": "Array of note objects",
+      "items": {
+        "type": "object",
+        "required": ["time", "lane", "type"],
+        "properties": {
+          "time": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Note timing in milliseconds"
+          },
+          "lane": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Lane index (0-based, must be < gameConfig.lanes)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tap", "hold", "slide"],
+            "description": "Note type"
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0,
+            "description": "Duration in milliseconds (for hold notes)"
+          }
+        }
+      }
+    },
+    "timing": {
+      "type": "array",
+      "description": "BPM change points (optional)",
+      "items": {
+        "type": "object",
+        "required": ["time", "bpm"],
+        "properties": {
+          "time": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Time point in milliseconds"
+          },
+          "bpm": {
+            "type": "number",
+            "minimum": 1,
+            "description": "New BPM value"
+          }
+        }
+      }
+    }
+  }
+}
