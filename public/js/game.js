@@ -38,6 +38,9 @@ class GameRenderer {
     this.resizeCanvas();
     window.addEventListener('resize', () => this.resizeCanvas());
     this.setupKeyboard();
+
+    console.log('🎮 Game renderer initialized');
+    console.log('Canvas size:', this.canvas.width, 'x', this.canvas.height);
   }
 
   /**
@@ -46,10 +49,44 @@ class GameRenderer {
   resizeCanvas() {
     const container = this.canvas.parentElement;
     this.canvas.width = Math.min(800, container.clientWidth - 40);
-    this.canvas.height = Math.min(600, container.clientHeight - 200);
+    this.canvas.height = 600; // 固定高度，避免計算問題
 
     this.config.laneWidth = this.canvas.width / this.config.lanes;
     this.config.judgeLineY = this.canvas.height * 0.85;
+
+    // 繪製初始畫面
+    if (!this.isPlaying) {
+      this.drawInitialScreen();
+    }
+  }
+
+  /**
+   * 繪製初始畫面（遊戲開始前）
+   */
+  drawInitialScreen() {
+    this.clear();
+    this.drawBreadboard();
+
+    // 初始化所有 LED 為熄滅狀態
+    this.ledStates = Array(this.config.lanes).fill(null).map(() =>
+      Array(this.config.ledsPerLane).fill(false)
+    );
+
+    this.drawLEDs();
+    this.drawButtons();
+    this.drawLanes();
+
+    // 顯示提示文字
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('準備開始...', this.canvas.width / 2, this.canvas.height / 2);
+
+    ctx.font = '16px Arial';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillText('使用 D F J K 鍵遊玩', this.canvas.width / 2, this.canvas.height / 2 + 40);
   }
 
   /**
@@ -65,12 +102,30 @@ class GameRenderer {
         this.showLanePress(lane);
       }
     });
+
+    // 滑鼠點擊支援
+    this.canvas.addEventListener('click', (e) => {
+      if (!this.isPlaying) return;
+
+      const rect = this.canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // 計算點擊的是哪個軌道
+      const lane = Math.floor(x / this.config.laneWidth);
+      if (lane >= 0 && lane < this.config.lanes) {
+        this.handleInput(lane);
+        this.showLanePress(lane);
+      }
+    });
   }
 
   /**
    * 開始遊戲
    */
   start(chart) {
+    console.log('🎮 Starting game with chart:', chart.metadata.title);
+
     this.chart = chart;
     this.config.lanes = chart.gameConfig.lanes || 4;
     this.config.noteSpeed = chart.gameConfig.noteSpeed || 1.0;
@@ -83,6 +138,9 @@ class GameRenderer {
     this.ledStates = Array(this.config.lanes).fill(null).map(() =>
       Array(this.config.ledsPerLane).fill(false)
     );
+
+    console.log('LED states initialized:', this.ledStates.length, 'lanes');
+    console.log('Total notes:', this.notes.length);
 
     // 嘗試播放音樂（如果有音訊檔案）
     this.playAudio();
@@ -270,12 +328,19 @@ class GameRenderer {
     const ledRadius = 12; // LED 半徑
     const ledSpacing = (this.canvas.height * 0.75) / (ledsPerLane + 1);
 
+    // 確保 ledStates 已初始化
+    if (!this.ledStates || this.ledStates.length === 0) {
+      this.ledStates = Array(lanes).fill(null).map(() =>
+        Array(ledsPerLane).fill(false)
+      );
+    }
+
     for (let lane = 0; lane < lanes; lane++) {
       const centerX = lane * laneWidth + laneWidth / 2;
 
       for (let led = 0; led < ledsPerLane; led++) {
         const y = ledSpacing * (led + 1);
-        const isOn = this.ledStates[lane][led];
+        const isOn = this.ledStates[lane] && this.ledStates[lane][led];
 
         this.drawLED(centerX, y, ledRadius, isOn);
       }
