@@ -8,7 +8,7 @@
     "bpm": 120,
     "offset": 0,
     "duration": 30000,
-    "audioFile": "audio/demo.mp3",
+    "audioFile": "",
     "previewStart": 5000,
     "createdAt": "2025-12-11T00:00:00Z",
     "description": "A simple demo chart for testing"

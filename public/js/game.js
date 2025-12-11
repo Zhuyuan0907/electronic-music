@@ -1,5 +1,5 @@
 /**
- * 遊戲渲染引擎（Canvas）
+ * 遊戲渲染引擎（Canvas + 音樂）
  */
 
 class GameRenderer {
@@ -12,16 +12,20 @@ class GameRenderer {
     this.notes = [];
     this.activeNotes = [];
     this.animationId = null;
+    this.audio = null; // 音樂播放器
 
     // 遊戲配置
     this.config = {
       lanes: 4,
       noteSpeed: 1.0,
-      noteHeight: 20,
-      laneWidth: 100,
+      ledsPerLane: 5, // 每條軌道有 5 個 LED
+      laneWidth: 120,
       judgeLineY: 0.85, // 判定線位置（畫面的 85%）
       noteLeadTime: 2000 // 音符提前顯示時間（毫秒）
     };
+
+    // LED 狀態（模擬硬體）
+    this.ledStates = [];
 
     // 鍵盤映射
     this.keyMap = {
@@ -75,6 +79,14 @@ class GameRenderer {
     this.isPlaying = true;
     this.startTime = Date.now();
 
+    // 初始化 LED 狀態
+    this.ledStates = Array(this.config.lanes).fill(null).map(() =>
+      Array(this.config.ledsPerLane).fill(false)
+    );
+
+    // 嘗試播放音樂（如果有音訊檔案）
+    this.playAudio();
+
     this.resizeCanvas();
     this.render();
   }
@@ -87,7 +99,36 @@ class GameRenderer {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+    // 停止音樂
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+    }
     this.clear();
+  }
+
+  /**
+   * 播放音樂
+   */
+  playAudio() {
+    if (!this.chart.metadata.audioFile) return;
+
+    try {
+      this.audio = new Audio(`/charts/${this.chart.metadata.audioFile}`);
+      this.audio.volume = 0.5; // 音量 50%
+
+      // 延遲播放以同步遊戲開始
+      const offset = this.chart.metadata.offset || 0;
+      setTimeout(() => {
+        if (this.isPlaying && this.audio) {
+          this.audio.play().catch(err => {
+            console.warn('音訊播放失敗（可能需要使用者互動）:', err);
+          });
+        }
+      }, Math.max(0, -offset));
+    } catch (error) {
+      console.warn('無法載入音訊檔案:', error);
+    }
   }
 
   /**
@@ -142,25 +183,244 @@ class GameRenderer {
 
     const currentTime = Date.now() - this.startTime;
 
+    // 更新 LED 狀態
+    this.updateLEDStates(currentTime);
+
+    // 繪製
     this.clear();
-    this.drawLanes();
-    this.drawJudgeLine();
-    this.drawNotes(currentTime);
-    this.drawLanePress();
+    this.drawBreadboard(); // 麵包板背景
+    this.drawLEDs(); // LED 燈
+    this.drawButtons(); // 按鈕
+    this.drawLanes(); // 軌道線（淡化）
+    this.drawJudgeLine(); // 判定線
+    this.drawNotes(currentTime); // 音符
+    this.drawLanePress(); // 按壓效果
 
     this.animationId = requestAnimationFrame(() => this.render());
+  }
+
+  /**
+   * 更新 LED 狀態（模擬硬體）
+   */
+  updateLEDStates(currentTime) {
+    const { lanes, ledsPerLane, noteLeadTime, noteSpeed, judgeLineY } = this.config;
+
+    // 重置所有 LED
+    this.ledStates = Array(lanes).fill(null).map(() =>
+      Array(ledsPerLane).fill(false)
+    );
+
+    // 根據活躍音符點亮 LED
+    this.activeNotes.forEach(note => {
+      const timeUntilHit = note.time - currentTime;
+      const progress = 1 - (timeUntilHit / (noteLeadTime / noteSpeed));
+
+      if (progress >= 0 && progress <= 1) {
+        // 計算應該亮哪個 LED（從上到下）
+        const ledIndex = Math.floor(progress * ledsPerLane);
+        if (ledIndex >= 0 && ledIndex < ledsPerLane) {
+          this.ledStates[note.lane][ledIndex] = true;
+        }
+      }
+    });
   }
 
   /**
    * 清空畫布
    */
   clear() {
-    this.ctx.fillStyle = '#0a0a0a';
+    // 深色背景
+    this.ctx.fillStyle = '#1a1a1a';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   /**
-   * 繪製軌道
+   * 繪製麵包板背景
+   */
+  drawBreadboard() {
+    const { lanes, laneWidth } = this.config;
+
+    // 麵包板底板（淺咖啡色）
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+    gradient.addColorStop(0, '#2a2520');
+    gradient.addColorStop(1, '#1f1b18');
+
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // 麵包板孔洞紋理（簡化版）
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    const holeSize = 3;
+    const holeSpacing = 20;
+
+    for (let y = 20; y < this.canvas.height; y += holeSpacing) {
+      for (let x = 20; x < this.canvas.width; x += holeSpacing) {
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, holeSize, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+    }
+  }
+
+  /**
+   * 繪製 LED 燈（模擬實體硬體）
+   */
+  drawLEDs() {
+    const { lanes, ledsPerLane, laneWidth } = this.config;
+    const ledRadius = 12; // LED 半徑
+    const ledSpacing = (this.canvas.height * 0.75) / (ledsPerLane + 1);
+
+    for (let lane = 0; lane < lanes; lane++) {
+      const centerX = lane * laneWidth + laneWidth / 2;
+
+      for (let led = 0; led < ledsPerLane; led++) {
+        const y = ledSpacing * (led + 1);
+        const isOn = this.ledStates[lane][led];
+
+        this.drawLED(centerX, y, ledRadius, isOn);
+      }
+    }
+  }
+
+  /**
+   * 繪製單個 LED
+   */
+  drawLED(x, y, radius, isOn) {
+    const ctx = this.ctx;
+
+    if (isOn) {
+      // LED 發光效果
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.5);
+      gradient.addColorStop(0, 'rgba(0, 212, 255, 0.8)');
+      gradient.addColorStop(0.4, 'rgba(0, 212, 255, 0.4)');
+      gradient.addColorStop(0.7, 'rgba(0, 212, 255, 0.1)');
+      gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // LED 本體（亮）
+      const ledGradient = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, 0, x, y, radius);
+      ledGradient.addColorStop(0, '#ffffff');
+      ledGradient.addColorStop(0.3, '#00ffff');
+      ledGradient.addColorStop(0.7, '#00d4ff');
+      ledGradient.addColorStop(1, '#0088cc');
+
+      ctx.fillStyle = ledGradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 高光
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.beginPath();
+      ctx.arc(x - radius * 0.4, y - radius * 0.4, radius * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // LED 本體（暗）
+      const offGradient = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, 0, x, y, radius);
+      offGradient.addColorStop(0, '#334455');
+      offGradient.addColorStop(1, '#112233');
+
+      ctx.fillStyle = offGradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 邊框
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // LED 腳位（兩條小線）
+    ctx.strokeStyle = '#888888';
+    ctx.lineWidth = 2;
+
+    // 左腳
+    ctx.beginPath();
+    ctx.moveTo(x - radius * 0.5, y + radius);
+    ctx.lineTo(x - radius * 0.5, y + radius + 8);
+    ctx.stroke();
+
+    // 右腳
+    ctx.beginPath();
+    ctx.moveTo(x + radius * 0.5, y + radius);
+    ctx.lineTo(x + radius * 0.5, y + radius + 8);
+    ctx.stroke();
+  }
+
+  /**
+   * 繪製按鈕（在底部）
+   */
+  drawButtons() {
+    const { lanes, laneWidth, judgeLineY } = this.config;
+    const buttonRadius = 20;
+    const buttonY = judgeLineY + 40;
+
+    for (let lane = 0; lane < lanes; lane++) {
+      const centerX = lane * laneWidth + laneWidth / 2;
+      const isPressed = this.lanePressTime && this.lanePressTime[lane] &&
+                       (Date.now() - this.lanePressTime[lane] < 200);
+
+      this.drawButton(centerX, buttonY, buttonRadius, isPressed, lane);
+    }
+  }
+
+  /**
+   * 繪製單個按鈕
+   */
+  drawButton(x, y, radius, isPressed, lane) {
+    const ctx = this.ctx;
+    const depth = isPressed ? 2 : 5;
+
+    // 按鈕陰影
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.beginPath();
+    ctx.arc(x + 2, y + 2, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 按鈕本體
+    const gradient = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, 0, x, y, radius);
+    if (isPressed) {
+      gradient.addColorStop(0, '#ff6b6b');
+      gradient.addColorStop(1, '#cc0000');
+    } else {
+      gradient.addColorStop(0, '#ff4444');
+      gradient.addColorStop(1, '#aa0000');
+    }
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y - (isPressed ? 0 : depth), radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 按鈕邊框
+    ctx.strokeStyle = '#660000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 高光
+    if (!isPressed) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.beginPath();
+      ctx.arc(x - radius * 0.4, y - depth - radius * 0.4, radius * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 按鈕標籤
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const keys = ['D', 'F', 'J', 'K'];
+    ctx.fillText(keys[lane], x, y - (isPressed ? 0 : depth));
+  }
+
+  /**
+   * 繪製軌道（淡化，主要靠 LED）
    */
   drawLanes() {
     const { lanes, laneWidth } = this.config;
@@ -168,12 +428,8 @@ class GameRenderer {
     for (let i = 0; i < lanes; i++) {
       const x = i * laneWidth;
 
-      // 軌道背景
-      this.ctx.fillStyle = i % 2 === 0 ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.05)';
-      this.ctx.fillRect(x, 0, laneWidth, this.canvas.height);
-
-      // 軌道邊界
-      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      // 軌道邊界（很淡）
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       this.ctx.lineWidth = 1;
       this.ctx.beginPath();
       this.ctx.moveTo(x, 0);
@@ -207,51 +463,11 @@ class GameRenderer {
   }
 
   /**
-   * 繪製音符
+   * 繪製音符軌跡（輔助視覺，主要看 LED）
    */
   drawNotes(currentTime) {
-    const { laneWidth, noteHeight, judgeLineY, noteLeadTime, noteSpeed } = this.config;
-
-    this.activeNotes.forEach(note => {
-      // 計算音符位置
-      const timeUntilHit = note.time - currentTime;
-      const progress = 1 - (timeUntilHit / (noteLeadTime / noteSpeed));
-
-      if (progress < 0 || progress > 1.2) return; // 不在可見範圍
-
-      const y = judgeLineY * progress;
-      const x = note.lane * laneWidth;
-
-      // 繪製音符
-      this.drawNote(x, y, laneWidth, noteHeight, note.type);
-    });
-  }
-
-  /**
-   * 繪製單個音符
-   */
-  drawNote(x, y, width, height, type) {
-    const padding = 8;
-
-    // 音符陰影
-    this.ctx.shadowColor = 'rgba(0, 212, 255, 0.5)';
-    this.ctx.shadowBlur = 15;
-
-    // 音符漸變
-    const gradient = this.ctx.createLinearGradient(x + padding, y - height / 2, x + width - padding, y + height / 2);
-    gradient.addColorStop(0, '#00d4ff');
-    gradient.addColorStop(1, '#0099cc');
-
-    this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(x + padding, y - height / 2, width - padding * 2, height);
-
-    // 音符邊框
-    this.ctx.strokeStyle = '#00ffff';
-    this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(x + padding, y - height / 2, width - padding * 2, height);
-
-    // 重置陰影
-    this.ctx.shadowBlur = 0;
+    // 音符現在主要由 LED 燈顯示
+    // 這裡只保留簡單的軌跡線作為輔助
   }
 
   /**
